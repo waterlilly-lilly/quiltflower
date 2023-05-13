@@ -25,7 +25,7 @@ public final class SwitchHelper {
   public static boolean simplifySwitches(Statement stat, StructMethod mt, RootStatement root) {
     boolean ret = false;
     if (stat instanceof SwitchStatement) {
-      ret = simplify((SwitchStatement)stat, mt, root);
+      ret = simplify((SwitchStatement) stat, mt, root);
     }
 
     for (int i = 0; i < stat.getStats().size(); i++) {
@@ -36,7 +36,7 @@ public final class SwitchHelper {
   }
 
   private static boolean simplify(SwitchStatement switchStatement, StructMethod mt, RootStatement root) {
-    SwitchHeadExprent switchHeadExprent = (SwitchHeadExprent)switchStatement.getHeadexprent();
+    SwitchHeadExprent switchHeadExprent = (SwitchHeadExprent) switchStatement.getHeadexprent();
     Exprent value = switchHeadExprent.getValue();
     ArrayExprent array = getEnumArrayExprent(value, root);
     if (array != null) {
@@ -60,7 +60,7 @@ public final class SwitchHelper {
 
               // Keep track of whether the assignment of the array field has already happened.
               // The same local variable might be used for multiple arrays (like with Kotlin, for example.)
-              boolean[] fieldAssignmentEncountered = new boolean[] { false }; // single-element reference for lambdas
+              boolean[] fieldAssignmentEncountered = new boolean[]{false}; // single-element reference for lambdas
 
               wrapper.getOrBuildGraph().iterateExprents(exprent -> {
                 if (exprent instanceof AssignmentExprent) {
@@ -130,8 +130,7 @@ public final class SwitchHelper {
         for (Exprent exprent : caseValue) {
           if (exprent == null) {
             values.add(null);
-          }
-          else {
+          } else {
             Exprent realConst = mapping.get(exprent);
             if (realConst == null) {
               if (exprent instanceof ConstExprent) {
@@ -148,8 +147,8 @@ public final class SwitchHelper {
                   // TODO: more tests
                   for (Exprent key : mapping.keySet()) {
                     if (key instanceof ConstExprent
-                        && ((ConstExprent) key).getConstType().typeFamily == CodeConstants.TYPE_FAMILY_INTEGER
-                        && ((ConstExprent) key).getIntValue() > intLabel) {
+                      && ((ConstExprent) key).getConstType().typeFamily == CodeConstants.TYPE_FAMILY_INTEGER
+                      && ((ConstExprent) key).getIntValue() > intLabel) {
                       values.add(key.copy());
                       continue cases;
                     }
@@ -159,7 +158,7 @@ public final class SwitchHelper {
               root.addComment("$QF: Unable to simplify switch on enum", true);
               DecompilerContext.getLogger()
                 .writeMessage("Unable to simplify switch on enum: " + exprent + " not found, available: " + mapping + " in method " + mt.getClassQualifiedName() + " " + mt.getName(),
-                              IFernflowerLogger.Severity.ERROR);
+                  IFernflowerLogger.Severity.ERROR);
               return false;
             }
             values.add(realConst.copy());
@@ -168,7 +167,7 @@ public final class SwitchHelper {
       }
       caseValues.clear();
       caseValues.addAll(realCaseValues);
-      Exprent newExpr = ((InvocationExprent)array.getIndex()).getInstance().copy();
+      Exprent newExpr = ((InvocationExprent) array.getIndex()).getInstance().copy();
       switchHeadExprent.replaceExprent(value, newExpr);
       newExpr.addBytecodeOffsets(value.bytecode);
 
@@ -197,7 +196,7 @@ public final class SwitchHelper {
       IfStatement containingNullCheck = null;
       List<StatEdge> edges = switchStatement.getSuccessorEdges(StatEdge.TYPE_REGULAR);
       if (edges.size() == 1 && edges.get(0).getDestination() instanceof SwitchStatement) {
-        following = (SwitchStatement)edges.get(0).getDestination();
+        following = (SwitchStatement) edges.get(0).getDestination();
       } else {
         // definitely a nullable switch
         // we've already validated the `if` in `isSwitchOnString`
@@ -211,18 +210,18 @@ public final class SwitchHelper {
 
         Statement curr = switchStatement.getCaseStatements().get(i);
 
-        while (curr instanceof IfStatement)  {
-          IfStatement ifStat = (IfStatement)curr;
+        while (curr instanceof IfStatement) {
+          IfStatement ifStat = (IfStatement) curr;
           Exprent condition = ifStat.getHeadexprent().getCondition();
 
-          if (condition instanceof FunctionExprent && ((FunctionExprent)condition).getFuncType() == FunctionType.NE) {
-            condition = ((FunctionExprent)condition).getLstOperands().get(0);
+          if (condition instanceof FunctionExprent && ((FunctionExprent) condition).getFuncType() == FunctionType.NE) {
+            condition = ((FunctionExprent) condition).getLstOperands().get(0);
           }
 
-          if (condition instanceof InvocationExprent && ((InvocationExprent)condition).getLstParameters().size() == 1) {
+          if (condition instanceof InvocationExprent && ((InvocationExprent) condition).getLstParameters().size() == 1) {
             Exprent assign = ifStat.getIfstat().getExprents().get(0);
-            int caseVal = ((ConstExprent)((AssignmentExprent)assign).getRight()).getIntValue();
-            caseMap.put(caseVal, ((InvocationExprent)condition).getLstParameters().get(0));
+            int caseVal = ((ConstExprent) ((AssignmentExprent) assign).getRight()).getIntValue();
+            caseMap.put(caseVal, ((InvocationExprent) condition).getLstParameters().get(0));
           }
 
           curr = ifStat.getElsestat();
@@ -233,12 +232,12 @@ public final class SwitchHelper {
         // the else branch of the containing `if` will have an assignment exprent to get the null case from
         Statement elseBranch = containingNullCheck.getElsestat();
         AssignmentExprent assign = (AssignmentExprent) elseBranch.getExprents().get(0);
-        caseMap.put(((ConstExprent)assign.getRight()).getIntValue(), new ConstExprent(VarType.VARTYPE_NULL, null, null));
+        caseMap.put(((ConstExprent) assign.getRight()).getIntValue(), new ConstExprent(VarType.VARTYPE_NULL, null, null));
       }
 
       List<List<Exprent>> realCaseValues = following.getCaseValues().stream()
         .map(l -> l.stream()
-          .map(e -> e instanceof ConstExprent ? ((ConstExprent)e).getIntValue() : null)
+          .map(e -> e instanceof ConstExprent ? ((ConstExprent) e).getIntValue() : null)
           .map(caseMap::get)
           .collect(Collectors.toList()))
         .collect(Collectors.toList());
@@ -246,8 +245,8 @@ public final class SwitchHelper {
       following.getCaseValues().clear();
       following.getCaseValues().addAll(realCaseValues);
 
-      Exprent followingVal = ((SwitchHeadExprent)following.getHeadexprent()).getValue();
-      following.getHeadexprent().replaceExprent(followingVal, ((InvocationExprent)value).getInstance());
+      Exprent followingVal = ((SwitchHeadExprent) following.getHeadexprent()).getValue();
+      following.getHeadexprent().replaceExprent(followingVal, ((InvocationExprent) value).getInstance());
 
       List<Exprent> firsts = switchStatement.getFirst().getExprents();
       if (firsts.size() > 0) {
@@ -280,19 +279,20 @@ public final class SwitchHelper {
   }
 
   public static final int STATIC_FINAL_SYNTHETIC = CodeConstants.ACC_STATIC | CodeConstants.ACC_FINAL | CodeConstants.ACC_SYNTHETIC;
+
   /**
    * When Java introduced Enums they added the ability to use them in Switch statements.
    * This was done in a purely syntax sugar way using the old switch on int methods.
    * The compiler creates a synthetic class with a static int array field.
    * To support enums changing post compile, It initializes this field with a length of the current enum length.
    * And then for every referenced enum value it adds a mapping in the form of:
-   *   try {
-   *     field[Enum.VALUE.ordinal()] = 1;
-   *   } catch (FieldNotFoundException e) {}
-   *
+   * try {
+   * field[Enum.VALUE.ordinal()] = 1;
+   * } catch (FieldNotFoundException e) {}
+   * <p>
    * If a class has multiple switches on multiple enums, the compiler adds the init and try list to the BEGINNING of the static initalizer.
    * But they add the field to the END of the fields list.
-   * 
+   * <p>
    * Note: SOME compilers name the field starting with $SwitchMap, so if we do not have full context this can be a guess.
    * But Obfuscated/renamed code could cause issues
    */
@@ -301,10 +301,10 @@ public final class SwitchHelper {
       ArrayExprent arr = (ArrayExprent) exprent;
       Exprent tmp = arr.getArray();
       if (tmp instanceof FieldExprent) {
-        FieldExprent field = (FieldExprent)tmp;
+        FieldExprent field = (FieldExprent) tmp;
         Exprent index = arr.getIndex();
         ClassesProcessor.ClassNode classNode = DecompilerContext.getClassProcessor().getMapRootClasses().get(field.getClassname());
-        
+
         if (classNode == null || !"[I".equals(field.getDescriptor().descriptorString)) {
           return field.getName().startsWith("$SwitchMap") || //This is non-standard but we don't have any more information so..
             (index instanceof InvocationExprent && ((InvocationExprent) index).getName().equals("ordinal"));
@@ -359,8 +359,8 @@ public final class SwitchHelper {
         if (ops.get(0) instanceof FunctionExprent) {
           FunctionExprent nn = (FunctionExprent) ops.get(0);
           if (nn.getFuncType() == FunctionExprent.FunctionType.NE
-                && nn.getLstOperands().get(0) instanceof VarExprent
-                && nn.getLstOperands().get(1).getExprType().equals(VarType.VARTYPE_NULL)) {
+            && nn.getLstOperands().get(0) instanceof VarExprent
+            && nn.getLstOperands().get(1).getExprType().equals(VarType.VARTYPE_NULL)) {
             // TODO: consider if verifying the variable used is necessary
             // probably not, since the array is checked to be generated (?) so user written code shouldn't encounter bad resugaring
             if (ops.get(2) instanceof ConstExprent) {
@@ -450,31 +450,31 @@ public final class SwitchHelper {
 
   /**
    * Switch on string gets compiled into two sequential switch statements.
-   *   The first is a switch on the hashcode of the string with the case statement
-   *   being the actual if equal to string literal check. Hashcode collisions result in
-   *   an else if chain. The body of the if block sets the switch variable for the
-   *   following switch.
-   *
-   *   The second switch block has the case statements of the original switch on string.
-   *
-   *   byte b1 = -1;
-   *   switch (stringVar.hashcode()) {
-   *     case -390932093:
-   *        if (stringVar.equals("foo") {
-   *          b1 = 0;
-   *        }
-   *   }
-   *
-   *   switch(b1) {
-   *     case 0 :
-   *        // code for case "foo"
-   *   }
+   * The first is a switch on the hashcode of the string with the case statement
+   * being the actual if equal to string literal check. Hashcode collisions result in
+   * an else if chain. The body of the if block sets the switch variable for the
+   * following switch.
+   * <p>
+   * The second switch block has the case statements of the original switch on string.
+   * <p>
+   * byte b1 = -1;
+   * switch (stringVar.hashcode()) {
+   * case -390932093:
+   * if (stringVar.equals("foo") {
+   * b1 = 0;
+   * }
+   * }
+   * <p>
+   * switch(b1) {
+   * case 0 :
+   * // code for case "foo"
+   * }
    */
   private static boolean isSwitchOnString(SwitchStatement first) {
     SwitchStatement second = null;
     List<StatEdge> edges = first.getSuccessorEdges(StatEdge.TYPE_REGULAR);
     if (edges.size() == 1 && edges.get(0).getDestination() instanceof SwitchStatement) {
-      second = (SwitchStatement)edges.get(0).getDestination();
+      second = (SwitchStatement) edges.get(0).getDestination();
     }
     AssignmentExprent nullAssign = null;
 
@@ -485,7 +485,7 @@ public final class SwitchHelper {
         Exprent ifCond = parent.getHeadexprent().getCondition();
         // and it's a null check with `else` branch,
         if (parent.iftype == IfStatement.IFTYPE_IFELSE && ifCond instanceof FunctionExprent) {
-          FunctionExprent func = (FunctionExprent)ifCond;
+          FunctionExprent func = (FunctionExprent) ifCond;
           if (func.getFuncType() == FunctionType.NE && func.getLstOperands().size() == 2) {
             Exprent right = func.getLstOperands().get(1);
             if (right instanceof ConstExprent && right.getExprType() == VarType.VARTYPE_NULL) {
@@ -494,11 +494,11 @@ public final class SwitchHelper {
               if (elseStat instanceof BasicBlockStatement && elseStat.getExprents().size() == 1) {
                 Exprent assign = elseStat.getExprents().get(0);
                 if (assign instanceof AssignmentExprent) {
-                  nullAssign = (AssignmentExprent)assign;
+                  nullAssign = (AssignmentExprent) assign;
                   // then we're probably a nullable string-switch
                   edges = parent.getSuccessorEdges(StatEdge.TYPE_REGULAR);
                   if (edges.size() == 1 && edges.get(0).getDestination() instanceof SwitchStatement) {
-                    second = (SwitchStatement)edges.get(0).getDestination();
+                    second = (SwitchStatement) edges.get(0).getDestination();
                   }
                 }
               }
@@ -509,11 +509,11 @@ public final class SwitchHelper {
     }
 
     if (second != null) {
-      Exprent firstValue = ((SwitchHeadExprent)first.getHeadexprent()).getValue();
-      Exprent secondValue = ((SwitchHeadExprent)second.getHeadexprent()).getValue();
+      Exprent firstValue = ((SwitchHeadExprent) first.getHeadexprent()).getValue();
+      Exprent secondValue = ((SwitchHeadExprent) second.getHeadexprent()).getValue();
 
       if (firstValue instanceof InvocationExprent && secondValue instanceof VarExprent && first.getCaseStatements().get(0) instanceof IfStatement) {
-        InvocationExprent invExpr = (InvocationExprent)firstValue;
+        InvocationExprent invExpr = (InvocationExprent) firstValue;
         VarExprent varExpr = (VarExprent) secondValue;
         if (nullAssign != null && !nullAssign.getLeft().equals(varExpr)) {
           return false; // wrong assignment across `if`
@@ -527,21 +527,21 @@ public final class SwitchHelper {
               Statement curr = first.getCaseStatements().get(i);
               while (matches && curr != null) {
                 if (curr instanceof IfStatement) {
-                  IfStatement ifStat = (IfStatement)curr;
+                  IfStatement ifStat = (IfStatement) curr;
                   Exprent condition = ifStat.getHeadexprent().getCondition();
 
-                  if (condition instanceof FunctionExprent && ((FunctionExprent)condition).getFuncType() == FunctionType.NE) {
-                    condition = ((FunctionExprent)condition).getLstOperands().get(0);
+                  if (condition instanceof FunctionExprent && ((FunctionExprent) condition).getFuncType() == FunctionType.NE) {
+                    condition = ((FunctionExprent) condition).getLstOperands().get(0);
                   }
 
                   if (condition instanceof InvocationExprent) {
-                    InvocationExprent condInvocation = (InvocationExprent)condition;
+                    InvocationExprent condInvocation = (InvocationExprent) condition;
 
                     if (condInvocation.getName().equals("equals") && condInvocation.getInstance().equals(invExpr.getInstance())) {
                       List<Exprent> block = ifStat.getIfstat().getExprents();
 
                       if (block != null && block.size() == 1 && block.get(0) instanceof AssignmentExprent) {
-                        AssignmentExprent assign = (AssignmentExprent)block.get(0);
+                        AssignmentExprent assign = (AssignmentExprent) block.get(0);
 
                         if (assign.getRight() instanceof ConstExprent && varExpr.equals(assign.getLeft())) {
 
@@ -563,6 +563,59 @@ public final class SwitchHelper {
       }
     }
 
+    return false;
+  }
+
+  /**
+   * Eclipse compiles switches on Strings differently from javac.
+   * Instead of creating two switch statements, Eclipse creates a switch over the hashcode of the input String,
+   * and then passes that into an if statement in each block that performs the equality check.
+   * <p>
+   * switch(stringVar.hashCode()) {
+   * case -390932093:
+   * if(stringVar.equals("foo") {
+   * // code for case "foo"
+   * }
+   * }
+   */
+  private static boolean isEclipseSwitchOnString(SwitchStatement sw) {
+    List<StatEdge> edges = sw.getSuccessorEdges(StatEdge.TYPE_REGULAR);
+    if (edges.size() == 1 && edges.get(0).getDestination() instanceof SwitchStatement) {
+      sw = (SwitchStatement) edges.get(0).getDestination();
+
+    }
+
+    Exprent value = ((SwitchHeadExprent) sw.getHeadexprent()).getValue();
+    if (value instanceof InvocationExprent && sw.getCaseStatements().get(0) instanceof IfStatement) {
+      InvocationExprent invExpr = (InvocationExprent) value;
+      if (invExpr.getName().equals("hashCode") && invExpr.getClassname().equals("java/lang/String")) {
+        boolean matches = true;
+
+        for (int i = 0; matches && i < sw.getCaseStatements().size(); ++i) {
+          if (!sw.getCaseEdges().get(i).contains(sw.getDefaultEdge())) {
+            Statement curr = sw.getCaseStatements().get(i);
+            while (matches && curr != null) {
+              if (curr instanceof IfStatement) {
+                IfStatement ifStat = (IfStatement) curr;
+                Exprent condition = ifStat.getHeadexprent().getCondition();
+                if (condition instanceof FunctionExprent && ((FunctionExprent) condition).getFuncType() == FunctionType.NE) {
+                  condition = ((FunctionExprent) condition).getLstOperands().get(0);
+                }
+                if (condition instanceof InvocationExprent) {
+                  InvocationExprent condInvocation = (InvocationExprent) condition;
+
+                  if (condInvocation.getName().equals("equals") && condInvocation.getInstance().equals(invExpr.getInstance())) {
+                    curr = ifStat.getElsestat();
+                  }
+                }
+              }
+              matches = false;
+            }
+          }
+        }
+        return matches;
+      }
+    }
     return false;
   }
 }
